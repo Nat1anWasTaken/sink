@@ -102,9 +102,7 @@ export default eventHandler(async (event) => {
 
           // Password correct - show unsafe warning if needed
           if (link.unsafe && body?.confirm !== 'true') {
-            setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-            setHeader(event, 'Cache-Control', 'no-store')
-            return generateUnsafeWarningHtml(slug, link.url, link.password)
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { password: link.password, locale: getLocale() }))
           }
         }
         else if (headerPassword) {
@@ -139,15 +137,11 @@ export default eventHandler(async (event) => {
         if (event.method === 'POST') {
           const body = await readBody(event)
           if (body?.confirm !== 'true') {
-            setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-            setHeader(event, 'Cache-Control', 'no-store')
-            return generateUnsafeWarningHtml(slug, link.url)
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
           }
         }
         else {
-          setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-          setHeader(event, 'Cache-Control', 'no-store')
-          return generateUnsafeWarningHtml(slug, link.url)
+          return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
         }
       }
 
