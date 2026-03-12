@@ -54,7 +54,7 @@ jobs:
         if: steps.status.outputs.behind_count != '0'
         run: |
           git checkout -B "${PR_BRANCH}" "origin/${BASE_BRANCH}"
-          git rebase "upstream/${UPSTREAM_BRANCH}"
+          git rebase --strategy-option=theirs "upstream/${UPSTREAM_BRANCH}"
 
       - name: Push rebased branch
         if: steps.status.outputs.behind_count != '0'
