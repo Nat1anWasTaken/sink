@@ -264,6 +264,28 @@
       "za": "短連結(Z-A)",
       "tip": "體驗功能: 僅對已經加載的連結有效"
     },
+    "batch": {
+      "title": "Batch Edit Links",
+      "description": "Apply the same settings to {count} selected links.",
+      "enter_mode": "Batch Edit",
+      "exit_mode": "Exit Batch Edit",
+      "selected_count": "{count} selected",
+      "select_loaded": "Select Loaded",
+      "unselect_loaded": "Unselect Loaded",
+      "clear_selected": "Clear Selection",
+      "edit_selected": "Edit Selected ({count})",
+      "apply": "Apply Changes",
+      "comment": "Comment",
+      "skip": "Do not change",
+      "set_value": "Set value",
+      "clear_value": "Clear value",
+      "no_change": "No change",
+      "enable": "Enable",
+      "disable": "Disable",
+      "update_success": "Updated {count} links successfully",
+      "update_partial": "{count} links failed to update",
+      "update_failed": "Failed to batch edit links"
+    },
     "update_failed": "更新連結失敗",
     "create_failed": "創建連結失敗",
     "ai_slug_failed": "AI 生成短連結失敗"

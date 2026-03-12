@@ -10,6 +10,8 @@ export interface LinkUpdateEvent {
 
 export const useDashboardLinksStore = defineStore('dashboard-links', () => {
   const sortBy = ref<'newest' | 'oldest' | 'az' | 'za'>('az')
+  const bulkEditMode = ref(false)
+  const selectedSlugs = ref<string[]>([])
 
   const showLinkEditor = ref(false)
   const editingLink = ref<Record<string, unknown> | null>(null)
@@ -30,6 +32,37 @@ export const useDashboardLinksStore = defineStore('dashboard-links', () => {
     linkUpdateHook.trigger({ link, type })
   }
 
+  function setBulkEditMode(value: boolean) {
+    bulkEditMode.value = value
+    if (!value)
+      selectedSlugs.value = []
+  }
+
+  function toggleBulkEditMode() {
+    setBulkEditMode(!bulkEditMode.value)
+  }
+
+  function setSelectedSlugs(slugs: string[]) {
+    selectedSlugs.value = Array.from(new Set(slugs))
+  }
+
+  function clearSelectedSlugs() {
+    selectedSlugs.value = []
+  }
+
+  function toggleSlugSelection(slug: string) {
+    if (selectedSlugs.value.includes(slug)) {
+      selectedSlugs.value = selectedSlugs.value.filter(item => item !== slug)
+      return
+    }
+
+    selectedSlugs.value = [...selectedSlugs.value, slug]
+  }
+
+  function removeSelectedSlug(slug: string) {
+    selectedSlugs.value = selectedSlugs.value.filter(item => item !== slug)
+  }
+
   function onLinkUpdate(callback: (event: LinkUpdateEvent) => void) {
     const { off } = linkUpdateHook.on(callback)
     tryOnScopeDispose(off)
@@ -38,8 +71,16 @@ export const useDashboardLinksStore = defineStore('dashboard-links', () => {
 
   return {
     sortBy,
+    bulkEditMode,
+    selectedSlugs,
     showLinkEditor,
     editingLink,
+    setBulkEditMode,
+    toggleBulkEditMode,
+    setSelectedSlugs,
+    clearSelectedSlugs,
+    toggleSlugSelection,
+    removeSelectedSlug,
     openLinkEditor,
     closeLinkEditor,
     notifyLinkUpdate,

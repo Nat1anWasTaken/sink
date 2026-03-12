@@ -192,6 +192,96 @@ describe.sequential('/api/link/edit', () => {
   })
 })
 
+describe.sequential('/api/link/batch-edit', () => {
+  it('updates multiple links with shared fields', async () => {
+    const firstSlug = `batch-edit-first-${Date.now()}`
+    const secondSlug = `batch-edit-second-${Date.now()}`
+    const comment = `batch comment ${Date.now()}`
+
+    await postJson('/api/link/create', {
+      url: 'https://example.com/first',
+      slug: firstSlug,
+    })
+    await postJson('/api/link/create', {
+      url: 'https://example.com/second',
+      slug: secondSlug,
+    })
+
+    const response = await putJson('/api/link/batch-edit', {
+      slugs: [firstSlug, secondSlug],
+      updates: {
+        comment,
+        cloaking: true,
+      },
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json() as {
+      updated: number
+      failed: number
+      links: Array<{ slug: string, comment?: string, cloaking?: boolean }>
+      failedItems: Array<{ slug: string, reason: string }>
+    }
+
+    expect(data.updated).toBe(2)
+    expect(data.failed).toBe(0)
+    expect(data.links.length).toBe(2)
+    expect(data.failedItems.length).toBe(0)
+    expect(data.links.every(link => link.comment === comment)).toBe(true)
+    expect(data.links.every(link => link.cloaking === true)).toBe(true)
+  })
+
+  it('returns partial failure when some slugs do not exist', async () => {
+    const existingSlug = `batch-edit-existing-${Date.now()}`
+    const missingSlug = `batch-edit-missing-${Date.now()}`
+
+    await postJson('/api/link/create', {
+      url: 'https://example.com/existing',
+      slug: existingSlug,
+    })
+
+    const response = await putJson('/api/link/batch-edit', {
+      slugs: [existingSlug, missingSlug],
+      updates: {
+        redirectWithQuery: false,
+      },
+    })
+
+    expect(response.status).toBe(200)
+    const data = await response.json() as {
+      updated: number
+      failed: number
+      links: Array<{ slug: string }>
+      failedItems: Array<{ slug: string, reason: string }>
+    }
+
+    expect(data.updated).toBe(1)
+    expect(data.failed).toBe(1)
+    expect(data.links.some(link => link.slug === existingSlug)).toBe(true)
+    expect(data.failedItems.some(item => item.slug === missingSlug)).toBe(true)
+  })
+
+  it('returns 400 when no update fields are provided', async () => {
+    const response = await putJson('/api/link/batch-edit', {
+      slugs: ['some-slug'],
+      updates: {},
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('returns 401 when accessing without auth', async () => {
+    const response = await putJson('/api/link/batch-edit', {
+      slugs: ['some-slug'],
+      updates: {
+        comment: 'test',
+      },
+    }, false)
+
+    expect(response.status).toBe(401)
+  })
+})
+
 describe.sequential('/api/link/delete', () => {
   it('deletes link with valid slug and auth', async () => {
     const response = await postJson('/api/link/delete', { slug: testLinkPayload.slug })

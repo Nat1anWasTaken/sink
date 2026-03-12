@@ -264,6 +264,28 @@
       "za": "Slug Z-A",
       "tip": "Trải nghiệm: Chỉ áp dụng với các liên kết đã tải"
     },
+    "batch": {
+      "title": "Batch Edit Links",
+      "description": "Apply the same settings to {count} selected links.",
+      "enter_mode": "Batch Edit",
+      "exit_mode": "Exit Batch Edit",
+      "selected_count": "{count} selected",
+      "select_loaded": "Select Loaded",
+      "unselect_loaded": "Unselect Loaded",
+      "clear_selected": "Clear Selection",
+      "edit_selected": "Edit Selected ({count})",
+      "apply": "Apply Changes",
+      "comment": "Comment",
+      "skip": "Do not change",
+      "set_value": "Set value",
+      "clear_value": "Clear value",
+      "no_change": "No change",
+      "enable": "Enable",
+      "disable": "Disable",
+      "update_success": "Updated {count} links successfully",
+      "update_partial": "{count} links failed to update",
+      "update_failed": "Failed to batch edit links"
+    },
     "update_failed": "Cập nhật liên kết thất bại",
     "create_failed": "Tạo liên kết thất bại",
     "ai_slug_failed": "Tạo slug AI thất bại"
