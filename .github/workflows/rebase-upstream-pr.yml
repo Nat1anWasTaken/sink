@@ -50,11 +50,12 @@ jobs:
             exit 0
           fi
 
-      - name: Rebase fork commits on top of upstream
+      - name: Replay upstream commits on top of base branch
         if: steps.status.outputs.behind_count != '0'
         run: |
-          git checkout -B "${PR_BRANCH}" "origin/${BASE_BRANCH}"
-          git rebase --strategy-option=theirs "upstream/${UPSTREAM_BRANCH}"
+          merge_base="$(git merge-base "origin/${BASE_BRANCH}" "upstream/${UPSTREAM_BRANCH}")"
+          git checkout -B "${PR_BRANCH}" "upstream/${UPSTREAM_BRANCH}"
+          git rebase --strategy-option=ours --onto "origin/${BASE_BRANCH}" "${merge_base}"
 
       - name: Push rebased branch
         if: steps.status.outputs.behind_count != '0'
@@ -73,17 +74,16 @@ jobs:
             const upstreamRepo = process.env.UPSTREAM_REPO
             const upstreamBranch = process.env.UPSTREAM_BRANCH
 
-            const title = `chore: rebase ${base} onto upstream/${upstreamBranch}`
+            const title = `chore: sync upstream/${upstreamBranch} into ${base}`
             const body = [
               'This PR was created automatically from the latest upstream changes.',
               '',
               `- Upstream: \`${upstreamRepo}@${upstreamBranch}\``,
-              `- Strategy: rebased \`${base}\` onto \`upstream/${upstreamBranch}\` so fork-only commits stay on top of the updated upstream history.`,
+              `- Strategy: replayed upstream-only commits onto \`${base}\` so this PR can be merged with GitHub's \`Rebase and merge\` button.`,
+              '- Conflict policy: local fork changes win when upstream overlaps the same lines.',
               '',
-              'Important:',
-              '- Review this as a rebased branch snapshot.',
-              '- Do not use the standard GitHub merge buttons for this PR, because they will not preserve the rebased history on the base branch.',
-              `- After review, update \`${base}\` by fast-forwarding or force-pushing it to \`${process.env.PR_BRANCH}\`.`,
+              'Merge:',
+              '- Use GitHub `Rebase and merge` to apply these upstream commits onto the latest base branch.',
             ].join('\n')
 
             const { data: pulls } = await github.rest.pulls.list({
