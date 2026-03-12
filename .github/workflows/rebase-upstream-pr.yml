@@ -1,0 +1,118 @@
+name: rebase-upstream-pr
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BASE_BRANCH: master
+  PR_BRANCH: automation/rebase-upstream
+  UPSTREAM_REPO: miantiao-me/Sink
+  UPSTREAM_BRANCH: master
+
+jobs:
+  rebase-upstream-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.BASE_BRANCH }}
+
+      - name: Configure git
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Fetch upstream and origin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags origin "${BASE_BRANCH}" "${PR_BRANCH}" || git fetch --no-tags origin "${BASE_BRANCH}"
+          git fetch --no-tags upstream "${UPSTREAM_BRANCH}"
+
+      - name: Stop when no upstream changes are available
+        id: status
+        run: |
+          behind_count="$(git rev-list --count "origin/${BASE_BRANCH}..upstream/${UPSTREAM_BRANCH}")"
+          echo "behind_count=${behind_count}" >> "${GITHUB_OUTPUT}"
+          if [ "${behind_count}" -eq 0 ]; then
+            echo 'No upstream commits to sync.'
+            exit 0
+          fi
+
+      - name: Rebase fork commits on top of upstream
+        if: steps.status.outputs.behind_count != '0'
+        run: |
+          git checkout -B "${PR_BRANCH}" "origin/${BASE_BRANCH}"
+          git rebase "upstream/${UPSTREAM_BRANCH}"
+
+      - name: Push rebased branch
+        if: steps.status.outputs.behind_count != '0'
+        run: |
+          git push --force-with-lease origin "${PR_BRANCH}"
+
+      - name: Create or update pull request
+        if: steps.status.outputs.behind_count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner
+            const repo = context.repo.repo
+            const head = `${owner}:${process.env.PR_BRANCH}`
+            const base = process.env.BASE_BRANCH
+            const upstreamRepo = process.env.UPSTREAM_REPO
+            const upstreamBranch = process.env.UPSTREAM_BRANCH
+
+            const title = `chore: rebase ${base} onto upstream/${upstreamBranch}`
+            const body = [
+              'This PR was created automatically from the latest upstream changes.',
+              '',
+              `- Upstream: \`${upstreamRepo}@${upstreamBranch}\``,
+              `- Strategy: rebased \`${base}\` onto \`upstream/${upstreamBranch}\` so fork-only commits stay on top of the updated upstream history.`,
+              '',
+              'Important:',
+              '- Review this as a rebased branch snapshot.',
+              '- Do not use the standard GitHub merge buttons for this PR, because they will not preserve the rebased history on the base branch.',
+              `- After review, update \`${base}\` by fast-forwarding or force-pushing it to \`${process.env.PR_BRANCH}\`.`,
+            ].join('\n')
+
+            const { data: pulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              head,
+              base,
+            })
+
+            if (pulls.length > 0) {
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: pulls[0].number,
+                title,
+                body,
+              })
+              core.info(`Updated pull request #${pulls[0].number}`)
+              return
+            }
+
+            const { data: pull } = await github.rest.pulls.create({
+              owner,
+              repo,
+              title,
+              head,
+              base,
+              body,
+            })
+
+            core.info(`Created pull request #${pull.number}`)

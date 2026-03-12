@@ -7,6 +7,11 @@ import { toast } from 'vue-sonner'
 
 const props = defineProps<{
   link: Link
+  bulkMode?: boolean
+  selected?: boolean
+}>()
+const emit = defineEmits<{
+  toggleSelect: []
 }>()
 
 const { t } = useI18n()
@@ -33,6 +38,10 @@ function copyLink() {
   copy(shortLink.value)
   toast(t('links.copy_success'))
 }
+
+function toggleSelect() {
+  emit('toggleSelect')
+}
 </script>
 
 <template>
@@ -43,6 +52,13 @@ function copyLink() {
         :to="`/dashboard/link?slug=${link.slug}`"
       >
         <div class="flex items-center justify-center space-x-3">
+          <Checkbox
+            v-if="bulkMode"
+            :model-value="selected"
+            aria-label="Select link for batch edit"
+            @click.prevent.stop
+            @update:model-value="toggleSelect"
+          />
           <Avatar>
             <AvatarImage
               :src="linkIcon"

@@ -24,3 +24,22 @@ export interface LinkListResponse {
 }
 
 export type LinkSortBy = 'newest' | 'oldest' | 'az' | 'za'
+
+export interface LinkBatchEditFailedItem {
+  slug: string
+  reason: string
+}
+
+export interface LinkBatchEditUpdates {
+  comment?: string | null
+  cloaking?: boolean | null
+  redirectWithQuery?: boolean | null
+  password?: string | null
+}
+
+export interface LinkBatchEditResponse {
+  updated: number
+  failed: number
+  links: Link[]
+  failedItems: LinkBatchEditFailedItem[]
+}

@@ -67,6 +67,13 @@ const displayedLinks = computed(() => {
   }
 })
 
+const selectedSlugsSet = computed(() => new Set(linksStore.selectedSlugs))
+const allLoadedSelected = computed(() => {
+  if (!links.value.length)
+    return false
+  return links.value.every(link => selectedSlugsSet.value.has(link.slug))
+})
+
 async function getLinks() {
   try {
     const data = await useAPI<LinkListResponse>('/api/link/list', {
@@ -105,16 +112,42 @@ const { isLoading } = useInfiniteScroll(
 function updateLinkList(link: Link, type: LinkUpdateType) {
   if (type === 'edit') {
     const index = links.value.findIndex(l => l.id === link.id)
-    links.value[index] = link
+    if (index !== -1)
+      links.value[index] = link
   }
   else if (type === 'delete') {
     const index = links.value.findIndex(l => l.id === link.id)
-    links.value.splice(index, 1)
+    if (index !== -1)
+      links.value.splice(index, 1)
+    linksStore.removeSelectedSlug(link.slug)
   }
   else {
     links.value.unshift(link)
     linksStore.sortBy = 'newest'
   }
+}
+
+function toggleLoadedSelection() {
+  if (allLoadedSelected.value) {
+    const loadedSlugs = new Set(links.value.map(link => link.slug))
+    linksStore.setSelectedSlugs(
+      linksStore.selectedSlugs.filter(slug => !loadedSlugs.has(slug)),
+    )
+    return
+  }
+
+  linksStore.setSelectedSlugs([
+    ...linksStore.selectedSlugs,
+    ...links.value.map(link => link.slug),
+  ])
+}
+
+function handleBatchEditSuccess(updatedLinks: Link[]) {
+  for (const link of updatedLinks) {
+    updateLinkList(link, 'edit')
+  }
+  linksStore.clearSelectedSlugs()
+  linksStore.setBulkEditMode(false)
 }
 
 linksStore.onLinkUpdate(({ link, type }) => {
@@ -123,6 +156,42 @@ linksStore.onLinkUpdate(({ link, type }) => {
 </script>
 
 <template>
+  <div class="mb-4 flex flex-wrap items-center gap-2">
+    <Button
+      variant="outline"
+      @click="linksStore.toggleBulkEditMode"
+    >
+      {{ linksStore.bulkEditMode ? $t('links.batch.exit_mode') : $t('links.batch.enter_mode') }}
+    </Button>
+
+    <template v-if="linksStore.bulkEditMode">
+      <Badge variant="secondary">
+        {{ $t('links.batch.selected_count', { count: linksStore.selectedSlugs.length }) }}
+      </Badge>
+
+      <Button
+        variant="outline"
+        :disabled="!links.length"
+        @click="toggleLoadedSelection"
+      >
+        {{ allLoadedSelected ? $t('links.batch.unselect_loaded') : $t('links.batch.select_loaded') }}
+      </Button>
+
+      <Button
+        variant="ghost"
+        :disabled="!linksStore.selectedSlugs.length"
+        @click="linksStore.clearSelectedSlugs"
+      >
+        {{ $t('links.batch.clear_selected') }}
+      </Button>
+
+      <DashboardLinksBatchEdit
+        :slugs="linksStore.selectedSlugs"
+        @success="handleBatchEditSuccess"
+      />
+    </template>
+  </div>
+
   <section
     class="
       grid grid-cols-1 gap-4
@@ -134,6 +203,9 @@ linksStore.onLinkUpdate(({ link, type }) => {
       v-for="link in displayedLinks"
       :key="link.id"
       :link="link"
+      :bulk-mode="linksStore.bulkEditMode"
+      :selected="selectedSlugsSet.has(link.slug)"
+      @toggle-select="linksStore.toggleSlugSelection(link.slug)"
     />
   </section>
   <div
