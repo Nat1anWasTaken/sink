@@ -99,6 +99,11 @@ export default eventHandler(async (event) => {
           if (link.unsafe && body?.confirm !== 'true') {
             return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { password: link.password, locale: getLocale() }))
           }
+
+          // Password correct - show unsafe warning if needed
+          if (link.unsafe && body?.confirm !== 'true') {
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { password: link.password, locale: getLocale() }))
+          }
         }
         else if (headerPassword) {
           if (headerPassword !== link.password) {
@@ -111,6 +116,19 @@ export default eventHandler(async (event) => {
         }
         else {
           return sendNoStoreHtml(generatePasswordHtml(slug, { locale: getLocale() }))
+        }
+      }
+
+      // Unsafe link warning (for links without password)
+      if (!link.password && link.unsafe) {
+        if (event.method === 'POST') {
+          const body = await readBody(event)
+          if (body?.confirm !== 'true') {
+            return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
+          }
+        }
+        else {
+          return sendNoStoreHtml(generateUnsafeWarningHtml(slug, link.url, { locale: getLocale() }))
         }
       }
 
